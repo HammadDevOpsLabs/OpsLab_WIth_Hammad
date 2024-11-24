@@ -1,0 +1,48 @@
+---
+- name: Install Docker and CRI-O
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Docker dependencies
+      package:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+      state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Add Docker GPG key and repository
+      shell: |
+        curl -fsSL https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg | apt-key add -
+        add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution | lower }} $(lsb_release -cs) stable"
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install Docker
+      package:
+        name: docker-ce
+        state: present
+
+    - name: Enable and start Docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Install CRI-O (CentOS)
+      shell: |
+        curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8_Stream/devel:kubic:libcontainers:stable.repo -o /etc/yum.repos.d/libcontainers.repo
+        yum install -y cri-o
+      when: ansible_distribution == "CentOS"
+
+    - name: Install CRI-O (Ubuntu)
+      shell: |
+        apt-get install -y cri-o cri-o-runc
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Enable and start CRI-O
+      service:
+        name: crio
+        state: started
+        enabled: true

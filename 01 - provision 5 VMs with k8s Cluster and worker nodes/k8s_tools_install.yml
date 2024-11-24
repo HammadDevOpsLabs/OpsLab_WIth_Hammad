@@ -1,0 +1,35 @@
+---
+- name: Install Kubernetes Tools
+  hosts: all
+  become: yes
+  tasks:
+    - name: Add Kubernetes GPG key and repository (Ubuntu)
+      shell: |
+        curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+        echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+        apt-get update
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Add Kubernetes repository (CentOS)
+      yum_repository:
+        name: kubernetes
+        description: Kubernetes
+        baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+        gpgcheck: yes
+        gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg
+        state: present
+      when: ansible_distribution == "CentOS"
+
+    - name: Install Kubernetes components
+      package:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+
+    - name: Enable kubelet service
+      service:
+        name: kubelet
+        state: started
+        enabled: true

@@ -1,0 +1,59 @@
+---
+- name: Update and Prepare Systems for Kubernetes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update package lists (Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Update package lists (CentOS)
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_distribution == "CentOS"
+
+    - name: Install basic dependencies
+      package:
+        name:
+          - curl
+          - net-tools
+          - iptables
+          - socat
+          - conntrack
+        state: present
+
+    - name: Open required ports for Kubernetes
+      firewalld:
+        port: "{{ item }}"
+        permanent: true
+        state: enabled
+      loop:
+        - 6443/tcp
+        - 10250/tcp
+        - 10251/tcp
+        - 10252/tcp
+        - 2379-2380/tcp
+        - 30000-32767/tcp
+      when: ansible_distribution == "CentOS"
+
+    - name: Ensure required ports are open
+      command: iptables -C INPUT -p tcp --dport {{ item }} -j ACCEPT || iptables -A INPUT -p tcp --dport {{ item }} -j ACCEPT
+      loop:
+        - 6443
+        - 10250
+        - 10251
+        - 10252
+        - 2379
+        - 2380
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Disable swap temporarily
+      command: swapoff -a
+
+    - name: Ensure swap is disabled permanently
+      replace:
+        path: /etc/fstab
+        regexp: '^(.*swap.*)$'
+        replace: '# \1'
