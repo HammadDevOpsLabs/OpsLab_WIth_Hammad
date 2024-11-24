@@ -1,0 +1,13 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+    - name: Enable Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
